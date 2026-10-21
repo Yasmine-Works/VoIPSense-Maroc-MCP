@@ -1,0 +1,55 @@
+{
+  "name": "voipsense-maroc-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for the VoIPSense Cloud public API (VoIPSense Maroc): click-to-call, hangup, transfer, recordings, leads, campaigns, dispositions and GoHighLevel services from Claude and any MCP client.",
+  "type": "module",
+  "bin": {
+    "voipsense-maroc-mcp": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('dist/index.js', 0o755)\"",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "inspect": "npx @modelcontextprotocol/inspector node dist/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "voipsense",
+    "voip",
+    "call-center",
+    "pbx",
+    "click-to-call",
+    "maroc",
+    "morocco"
+  ],
+  "author": "Yasmine Works",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Yasmine-Works/VoIPSense-Maroc-MCP.git"
+  },
+  "homepage": "https://github.com/Yasmine-Works/VoIPSense-Maroc-MCP#readme",
+  "bugs": {
+    "url": "https://github.com/Yasmine-Works/VoIPSense-Maroc-MCP/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^5.9.3"
+  }
+}
