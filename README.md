@@ -6,6 +6,7 @@
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server for the **[VoIPSense Cloud](https://app.voipsensemaroc.com) public API**.
 It lets Claude (and any MCP client) place and control calls, read call results, fetch recordings and push leads into your call center, all in plain language.
+An optional **console mode** adds dashboards, live switchboard status, PBX configuration, the built-in CRM and the omnichannel inbox.
 
 > "Call 0612345678 from extension 11151, then send me yesterday's answered calls for the *Prospection Web* campaign."
 
@@ -30,6 +31,28 @@ It lets Claude (and any MCP client) place and control calls, read call results, 
 | `list_dispositions` | `GET /v1/dispositions` | `callcenter:read` | Outcome codes agents set on calls |
 | `ghl_list_subaccounts` | `GET /v1/ghl/subaccounts` | `callcenter:read` | Linked GoHighLevel sub-accounts and their services |
 | `ghl_set_services` | `POST /v1/ghl/services` | `callcenter:write` | Set the service(s) requested by GoHighLevel contacts |
+
+### Console mode tools (optional, `VOIPSENSE_EMAIL` + `VOIPSENSE_PASSWORD`)
+
+These use the same API as the VoIPSense web console, authenticated as a console user. See [Console mode](#console-mode-optional) before enabling it.
+
+| Tool | What it does |
+|---|---|
+| `get_analytics` | Dashboards: `kpis`, `hourly`, `dispositions`, `queues` (SLA), `agent-performance`, `agent-overview`, `abandoned-calls`, `top-agents`, `campaigns`, `lists`, `by-line` |
+| `get_live_status` | Real-time state of every extension, active lines, callers waiting in queues, parked calls |
+| `list_extensions` | Extensions with live registration status, caller ID, forwarding, recording policy (SIP secrets never returned) |
+| `list_pbx_config` | Queues, ring groups, IVRs, opening hours (time conditions), conferences, announcements, class of service, outbound routing, directory, pause codes, skills… |
+| `list_agents` | Call center agents (or all console users) |
+| `get_account_overview` | Plan, resource summary, quota usage and alerts |
+| `list_callback_requests` / `cancel_callback_request` | Callback requests left by callers |
+| `list_blocked_numbers` / `block_number` / `unblock_number` | PBX blacklist |
+| `list_voicemail` | Voicemail boxes and message counts |
+| `crm_search_contacts` / `crm_get_contact` | Built-in CRM search, contact with notes, timeline, summary, tasks |
+| `crm_list_tasks_and_deals` / `crm_create_task` / `crm_add_note` / `crm_schedule_callback` | CRM follow-up |
+| `inbox_list_conversations` / `inbox_get_messages` / `inbox_send_message` | Omnichannel inbox (WhatsApp, email…) |
+| `agent_set_pause` | Start/end a pause for the logged-in user |
+| `list_notifications` / `mark_notifications_read` | Console notifications |
+| `console_get` | Read-only escape hatch: GET any other console route (e.g. `/pbx/parked-calls`, `/callcenter/campaigns`) |
 
 Write tools carry MCP annotations (`destructiveHint`, `idempotentHint`…) so clients like Claude ask for confirmation appropriately. A **read-only mode** removes every write tool (see [Configuration](#configuration)).
 
@@ -163,12 +186,39 @@ Any client that supports stdio MCP servers works. Command: `npx`, args: `["-y", 
 
 | Environment variable | Required | Default | Description |
 |---|---|---|---|
-| `VOIPSENSE_API_KEY` | ✅ | | Your `vsk_…` API key |
+| `VOIPSENSE_API_KEY` | ✅ * | | Your `vsk_…` API key (public API tools) |
+| `VOIPSENSE_EMAIL` | ✅ * | | Console user email (console mode) |
+| `VOIPSENSE_PASSWORD` | ✅ * | | Console user password (console mode) |
 | `VOIPSENSE_READ_ONLY` | | `false` | `true` to expose only read tools (no calls, no lead injection) |
 | `VOIPSENSE_DOWNLOAD_DIR` | | `~/Downloads/voipsense` | Where `download_recording` saves files |
 | `VOIPSENSE_BASE_URL` | | `https://app.voipsensemaroc.com/api/v1` | API base URL (for staging or a white-label host) |
 
+\* Set the API key, the console credentials, or both. Each set enables its own group of tools.
+
 Tip: for reporting-only use, create a key with just `cdr:read` / `recordings:read` / `callcenter:read` **and** set `VOIPSENSE_READ_ONLY=true`.
+
+---
+
+## Console mode (optional)
+
+Console mode signs in to the VoIPSense web console with an email and password, exactly like the browser does
+(`POST /api/auth/login` → 24h access token, renewed automatically with the 30-day refresh cookie). It unlocks the console tools listed above.
+
+```json
+"env": {
+  "VOIPSENSE_API_KEY": "vsk_your_key_here",
+  "VOIPSENSE_EMAIL": "mcp-bot@your-company.ma",
+  "VOIPSENSE_PASSWORD": "a-strong-password"
+}
+```
+
+Before enabling it:
+
+- **Create a dedicated user** for the MCP server (Paramètres → Utilisateurs) with the lowest role that covers your needs (`SUPERVISOR` for reporting, `ADMIN` only if required). Don't use your personal admin account: everything the tools do is done as that user.
+- **Two-factor authentication is not supported**: the dedicated user must not have 2FA enabled.
+- **The password sits in your MCP config file** in plain text, like the API key. Keep that file private, and prefer `${VOIPSENSE_PASSWORD}` environment references in shared `.mcp.json` files.
+- **This API is not the documented public API.** Routes were mapped from the web console and may change without notice. If a console tool breaks, the public API tools keep working.
+- Use `VOIPSENSE_READ_ONLY=true` to keep console mode to reads only.
 
 ---
 
@@ -181,6 +231,10 @@ Tip: for reporting-only use, create a key with just `cdr:read` / `recordings:rea
 - *"Create the list 'Leads Site Web : Août' on a new 'Prospection Web' campaign, assign all agents, and inject these 1,200 leads from leads.csv."*
 - *"Which outbound line does each campaign use?"*
 - *"Tag contact 0600000000 in the Clinique Atlas sub-account with the services Implant and Blanchiment."*
+- *(console)* *"Who is available right now, and is anyone waiting in a queue?"*
+- *(console)* *"Compare this week's answer rate per agent and per line, and list abandoned calls over 30 s."*
+- *(console)* *"Block 0522000000 for outbound calls until the end of the month."*
+- *(console)* *"Show open WhatsApp conversations and summarize the last messages of each."*
 
 ---
 
@@ -259,6 +313,8 @@ Serveur MCP pour l'**API publique VoIPSense Cloud** : lancer / transférer / rac
    ```
 
 4. Demandez par exemple : *« Appelle le 0612345678 depuis le poste 11151 »*, *« Liste les appels répondus de la campagne Prospection Web depuis le 1er juin »*, *« Injecte ces leads dans la liste "Leads Site Web : Août" sur la campagne "Prospection Web" et inscris tous les agents »*.
+
+Mode console (optionnel) : ajoutez `VOIPSENSE_EMAIL` et `VOIPSENSE_PASSWORD` d'un **utilisateur dédié sans 2FA** pour débloquer statistiques, état en direct des postes et files, configuration PBX, CRM et boîte de réception omnicanale. Cette API est celle de la console web (non documentée) : elle peut évoluer sans préavis.
 
 Mode lecture seule : ajoutez `"VOIPSENSE_READ_ONLY": "true"` dans `env`.
 Support VoIPSense : contact@voipsensemaroc.com

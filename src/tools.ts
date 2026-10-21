@@ -2,31 +2,10 @@ import os from "node:os";
 import path from "node:path";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { VoipSenseClient } from "./client.js";
+import { clean, run } from "./util.js";
 
 const BATCH_SIZE = 500;
-
-function ok(data: unknown): CallToolResult {
-  return { content: [{ type: "text", text: typeof data === "string" ? data : JSON.stringify(data, null, 2) }] };
-}
-
-function fail(err: unknown): CallToolResult {
-  return { isError: true, content: [{ type: "text", text: err instanceof Error ? err.message : String(err) }] };
-}
-
-async function run(fn: () => Promise<unknown>): Promise<CallToolResult> {
-  try {
-    return ok(await fn());
-  } catch (err) {
-    return fail(err);
-  }
-}
-
-/** Drops undefined values so we never send `"key": null`-ish noise to the API. */
-function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
-  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as Partial<T>;
-}
 
 const leadSchema = z
   .object({
@@ -77,7 +56,7 @@ const campaignTarget = {
 
 const READ = { readOnlyHint: true, openWorldHint: true } as const;
 
-export function registerTools(server: McpServer, api: VoipSenseClient, opts: { readOnly: boolean; downloadDir?: string }) {
+export function registerPublicTools(server: McpServer, api: VoipSenseClient, opts: { readOnly: boolean; downloadDir?: string }) {
   // ───────────────────────────── Read tools ─────────────────────────────
 
   server.registerTool(

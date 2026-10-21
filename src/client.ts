@@ -5,12 +5,12 @@ export const DEFAULT_BASE_URL = "https://app.voipsensemaroc.com/api/v1";
 
 const ERROR_HINTS: Record<number, string> = {
   400: "Invalid or missing parameters",
-  401: "API key missing or invalid (check VOIPSENSE_API_KEY)",
-  403: "Insufficient permission for this API key (or plan quota reached)",
+  401: "Authentication failed (check VOIPSENSE_API_KEY, or VOIPSENSE_EMAIL / VOIPSENSE_PASSWORD for console tools)",
+  403: "Insufficient permission for this API key or user role (or plan quota reached)",
   404: "Not found: unknown recording, call already ended, or unknown extension/queue",
   409: "Conflict: tenant not provisioned, call not yet established, or no active channel left",
   422: "Destination unreachable from this call (outside the extension's dialing permissions)",
-  429: "Rate limit exceeded (100 requests/minute). Wait before retrying",
+  429: "Rate limit exceeded (public API: 100 requests/minute). Wait before retrying",
   502: "Telephony failure (origination or transfer)",
 };
 
